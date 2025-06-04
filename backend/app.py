@@ -14,48 +14,56 @@ load_dotenv()
 app = Flask(__name__)
 
 # Configure database - support both development and production
-if os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('DATABASE_URL'):
-    # Production environment (Railway or other platforms)
-    database_url = os.environ.get('DATABASE_URL')
-    if database_url and database_url.startswith('postgres://'):
-        # Fix for SQLAlchemy 1.4+
-        database_url = database_url.replace('postgres://', 'postgresql://', 1)
-    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
-else:
-    # Development environment
-    basedir = os.path.abspath(os.path.dirname(__file__))
-    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(basedir, "bugs.db")}'
+try:
+    if os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('DATABASE_URL'):
+        # Production environment (Railway or other platforms)
+        database_url = os.environ.get('DATABASE_URL')
+        if database_url and database_url.startswith('postgres://'):
+            # Fix for SQLAlchemy 1.4+
+            database_url = database_url.replace('postgres://', 'postgresql://', 1)
+        app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+    else:
+        # Development environment
+        basedir = os.path.abspath(os.path.dirname(__file__))
+        app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(basedir, "bugs.db")}'
 
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Initialize extensions
-db.init_app(app)
+    # Initialize extensions
+    db.init_app(app)
 
-# Configure CORS for production
-frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
-CORS(app, resources={
-    r"/*": {
-        "origins": [
-            frontend_url,
-            "http://localhost:*",
-            "http://127.0.0.1:*",
-            "https://*.netlify.app"
-        ],
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type"]
-    }
-}, supports_credentials=True)
+    # Configure CORS for production
+    frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+    CORS(app, resources={
+        r"/*": {
+            "origins": [
+                frontend_url,
+                "http://localhost:*",
+                "http://127.0.0.1:*",
+                "https://*.netlify.app"
+            ],
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            "allow_headers": ["Content-Type"]
+        }
+    }, supports_credentials=True)
 
-# Add request logging (only in development)
-@app.before_request
-def log_request():
-    if not os.environ.get('RAILWAY_ENVIRONMENT'):
-        print(f"Request: {request.method} {request.url}")
-        print(f"Origin: {request.headers.get('Origin')}")
+    # Add request logging (only in development)
+    @app.before_request
+    def log_request():
+        if not os.environ.get('RAILWAY_ENVIRONMENT'):
+            print(f"Request: {request.method} {request.url}")
+            print(f"Origin: {request.headers.get('Origin')}")
 
-# Create tables
-with app.app_context():
-    db.create_all()
+    # Create tables with error handling
+    with app.app_context():
+        try:
+            db.create_all()
+            print("Database tables created successfully")
+        except Exception as e:
+            print(f"Error creating database tables: {e}")
+
+except Exception as e:
+    print(f"Error during app initialization: {e}")
 
 @app.route('/bugs', methods=['POST'])
 def create_bug():
@@ -141,7 +149,23 @@ def delete_bug(bug_id):
 
 @app.route('/', methods=['GET'])
 def health_check():
-    return jsonify({'message': 'BugTrackr API is running!'}), 200
+    try:
+        # Test database connection
+        with app.app_context():
+            db.session.execute('SELECT 1')
+        
+        return jsonify({
+            'message': 'BugTrackr API is running!',
+            'status': 'healthy',
+            'database': 'connected'
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'message': 'BugTrackr API is running but database connection failed',
+            'status': 'degraded',
+            'database': 'disconnected',
+            'error': str(e)
+        }), 503
 
 @app.route('/test', methods=['GET', 'POST', 'OPTIONS'])
 def test_endpoint():
