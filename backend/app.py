@@ -1,3 +1,7 @@
+# BugTrackr Backend - Evolution Phase: Enhanced Status Handling
+# This update showcases our solution to frontend/backend status inconsistency
+# Now supports both "Progress" (frontend display) and "In Progress" (backend storage)
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from models import db, Bug, BugStatus
