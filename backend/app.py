@@ -55,19 +55,29 @@ try:
             print(f"Origin: {request.headers.get('Origin')}")
 
     # Create tables with error handling
-    with app.app_context():
-        try:
-            db.create_all()
-            print("Database tables created successfully")
-        except Exception as e:
-            print(f"Error creating database tables: {e}")
+    # Note: Tables will be created on first database access
+    # with app.app_context():
+    #     try:
+    #         db.create_all()
+    #         print("Database tables created successfully")
+    #     except Exception as e:
+    #         print(f"Error creating database tables: {e}")
 
 except Exception as e:
     print(f"Error during app initialization: {e}")
 
+def ensure_tables():
+    """Ensure database tables exist - called on first database access"""
+    try:
+        db.create_all()
+        print("Database tables created successfully")
+    except Exception as e:
+        print(f"Error creating database tables: {e}")
+
 @app.route('/bugs', methods=['POST'])
 def create_bug():
     try:
+        ensure_tables()  # Ensure tables exist
         data = request.get_json()
         
         if not data or not all(key in data for key in ['title', 'description', 'severity']):
@@ -89,6 +99,7 @@ def create_bug():
 @app.route('/bugs', methods=['GET'])
 def get_all_bugs():
     try:
+        ensure_tables()  # Ensure tables exist
         bugs = Bug.query.order_by(Bug.created_at.desc()).all()
         return jsonify([bug.to_dict() for bug in bugs]), 200
     except Exception as e:
@@ -150,6 +161,20 @@ def delete_bug(bug_id):
 @app.route('/', methods=['GET'])
 def health_check():
     try:
+        return jsonify({
+            'message': 'BugTrackr API is running!',
+            'status': 'healthy'
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'message': 'BugTrackr API error',
+            'status': 'error',
+            'error': str(e)
+        }), 500
+
+@app.route('/health', methods=['GET'])
+def detailed_health_check():
+    try:
         # Test database connection
         with app.app_context():
             db.session.execute('SELECT 1')
@@ -175,6 +200,10 @@ def test_endpoint():
         'origin': request.headers.get('Origin'),
         'port': request.environ.get('SERVER_PORT')
     }), 200
+
+@app.route('/ping', methods=['GET'])
+def ping():
+    return "pong", 200
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
