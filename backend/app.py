@@ -5,6 +5,7 @@ import os
 
 app = Flask(__name__)
 
+
 # Configure SQLite database
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(basedir, "bugs.db")}'
@@ -14,7 +15,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 CORS(app, origins=[
     "http://localhost:3000",
-    "http://localhost:3001", 
+    "http://localhost:3001",
     "http://localhost:3002",
     "http://127.0.0.1:3000",
     "http://127.0.0.1:3001",
