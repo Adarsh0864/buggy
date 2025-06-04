@@ -5,7 +5,6 @@ import os
 
 app = Flask(__name__)
 
-
 # Configure SQLite database
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(basedir, "bugs.db")}'
@@ -13,14 +12,16 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Initialize extensions
 db.init_app(app)
-CORS(app, origins=[
-    "http://localhost:3000",
-    "http://localhost:3001",
-    "http://localhost:3002",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:3001",
-    "http://127.0.0.1:3002"
-], supports_credentials=True)
+CORS(app, resources={
+    r"/*": {
+        "origins": [
+            "http://localhost:*",
+            "http://127.0.0.1:*"
+        ],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type"]
+    }
+}, supports_credentials=True)
 
 # Add request logging
 @app.before_request
@@ -68,6 +69,8 @@ def update_bug(bug_id):
         bug = Bug.query.get_or_404(bug_id)
         data = request.get_json()
         
+        print(f"Updating bug {bug_id} with data: {data}")  # Debug logging
+        
         if not data:
             return jsonify({'error': 'No data provided'}), 400
         
@@ -79,19 +82,28 @@ def update_bug(bug_id):
         if 'severity' in data:
             bug.severity = data['severity']
         if 'status' in data:
-            # Handle status enum conversion
-            if data['status'] == 'Open':
+            # Handle status enum conversion - accept both "Progress" and "In Progress"
+            status_value = data['status']
+            print(f"Status received: '{status_value}'")  # Debug logging
+            
+            if status_value == 'Open':
                 bug.status = BugStatus.OPEN
-            elif data['status'] == 'In Progress':
+            elif status_value in ['In Progress', 'Progress']:
                 bug.status = BugStatus.IN_PROGRESS
-            elif data['status'] == 'Resolved':
+            elif status_value == 'Resolved':
                 bug.status = BugStatus.RESOLVED
             else:
-                return jsonify({'error': 'Invalid status. Must be: Open, In Progress, or Resolved'}), 400
+                error_msg = f'Invalid status: "{status_value}". Must be: Open, Progress/In Progress, or Resolved'
+                print(f"Status error: {error_msg}")  # Debug logging
+                return jsonify({'error': error_msg}), 400
         
         db.session.commit()
+        print(f"Bug {bug_id} updated successfully")  # Debug logging
         return jsonify(bug.to_dict()), 200
     except Exception as e:
+        print(f"Error updating bug {bug_id}: {str(e)}")  # Debug logging
+        import traceback
+        traceback.print_exc()  # Print full stack trace
         return jsonify({'error': str(e)}), 500
 
 @app.route('/bugs/<int:bug_id>', methods=['DELETE'])

@@ -7,7 +7,22 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true,
+  timeout: 5000,
 });
+
+api.interceptors.response.use(
+  response => response,
+  error => {
+    console.error('API Error:', {
+      message: error.message,
+      endpoint: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status
+    });
+    throw error;
+  }
+);
 
 export const fetchBugs = async () => {
   try {
