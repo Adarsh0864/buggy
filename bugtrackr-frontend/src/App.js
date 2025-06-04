@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ExclamationTriangleIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { ExclamationTriangleIcon, XMarkIcon, BugAntIcon } from '@heroicons/react/24/outline';
 import BugForm from './components/BugForm';
 import BugList from './components/BugList';
-import Sidebar from './components/Sidebar';
 import * as api from './api';
 import './App.css';
 
@@ -69,27 +68,46 @@ function App() {
     setError(null);
   };
 
+  // Calculate stats for footer
+  const stats = {
+    total: bugs.length,
+    open: bugs.filter(bug => bug.status === 'Open').length,
+    inProgress: bugs.filter(bug => bug.status === 'In Progress').length,
+    resolved: bugs.filter(bug => bug.status === 'Resolved').length
+  };
+
   return (
     <div className="app">
-      <Sidebar />
-      
-      <div className="main-content">
+      {/* Header */}
+      <header className="header">
+        <div className="header-container">
+          <div className="header-content">
+            <BugAntIcon className="header-icon" />
+            <div>
+              <h1 className="header-title">BugTrackr</h1>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="main-content">
         {error && (
           <div className="error-alert">
             <ExclamationTriangleIcon className="error-icon" />
             <p className="error-text">{error}</p>
             <button onClick={dismissError} className="error-dismiss">
-              <XMarkIcon className="w-4 h-4" />
+              <XMarkIcon style={{ width: '16px', height: '16px' }} />
             </button>
           </div>
         )}
 
-        <div className="dashboard-grid">
-          <div className="form-section">
+        <div className="grid grid-two-cols">
+          <div className="card">
             <BugForm onBugCreated={handleBugCreated} />
           </div>
           
-          <div className="list-section">
+          <div className="card">
             <BugList 
               bugs={bugs}
               loading={loading}
@@ -98,7 +116,32 @@ function App() {
             />
           </div>
         </div>
-      </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="footer">
+        <div className="footer-container">
+          <p>BugTrackr - Keep your projects bug-free</p>
+          <div className="footer-stats">
+            <div className="stat-item">
+              <span className="stat-number">{stats.total}</span>
+              <span>Total</span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-number stat-open">{stats.open}</span>
+              <span>Open</span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-number stat-progress">{stats.inProgress}</span>
+              <span>In Progress</span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-number stat-resolved">{stats.resolved}</span>
+              <span>Resolved</span>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
