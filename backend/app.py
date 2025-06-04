@@ -6,33 +6,52 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from models import db, Bug, BugStatus
 import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 app = Flask(__name__)
 
-# Configure SQLite database
-basedir = os.path.abspath(os.path.dirname(__file__))
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(basedir, "bugs.db")}'
+# Configure database - support both development and production
+if os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('DATABASE_URL'):
+    # Production environment (Railway or other platforms)
+    database_url = os.environ.get('DATABASE_URL')
+    if database_url and database_url.startswith('postgres://'):
+        # Fix for SQLAlchemy 1.4+
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+else:
+    # Development environment
+    basedir = os.path.abspath(os.path.dirname(__file__))
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(basedir, "bugs.db")}'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Initialize extensions
 db.init_app(app)
+
+# Configure CORS for production
+frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
 CORS(app, resources={
     r"/*": {
         "origins": [
+            frontend_url,
             "http://localhost:*",
-            "http://127.0.0.1:*"
+            "http://127.0.0.1:*",
+            "https://*.netlify.app"
         ],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type"]
     }
 }, supports_credentials=True)
 
-# Add request logging
+# Add request logging (only in development)
 @app.before_request
 def log_request():
-    print(f"Request: {request.method} {request.url}")
-    print(f"Origin: {request.headers.get('Origin')}")
-    print(f"Headers: {dict(request.headers)}")
+    if not os.environ.get('RAILWAY_ENVIRONMENT'):
+        print(f"Request: {request.method} {request.url}")
+        print(f"Origin: {request.headers.get('Origin')}")
 
 # Create tables
 with app.app_context():
@@ -134,4 +153,6 @@ def test_endpoint():
     }), 200
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5001, host='0.0.0.0') 
+    port = int(os.environ.get('PORT', 5001))
+    debug = not os.environ.get('RAILWAY_ENVIRONMENT')
+    app.run(debug=debug, port=port, host='0.0.0.0') 

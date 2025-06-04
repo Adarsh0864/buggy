@@ -1,6 +1,12 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://127.0.0.1:5001';
+// API Configuration - supports both development and production
+const API_BASE_URL = process.env.REACT_APP_API_URL || 
+                    (process.env.NODE_ENV === 'production' ? 
+                     'https://your-app.railway.app' : 
+                     'http://localhost:5001');
+
+console.log('API Base URL:', API_BASE_URL);
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -8,19 +14,29 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
   withCredentials: true,
-  timeout: 5000,
 });
 
+// Add request interceptor for debugging
+api.interceptors.request.use(
+  (config) => {
+    console.log('API Request:', config.method?.toUpperCase(), config.url);
+    return config;
+  },
+  (error) => {
+    console.error('API Request Error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor for debugging and error handling
 api.interceptors.response.use(
-  response => response,
-  error => {
-    console.error('API Error:', {
-      message: error.message,
-      endpoint: error.config?.url,
-      method: error.config?.method,
-      status: error.response?.status
-    });
-    throw error;
+  (response) => {
+    console.log('API Response:', response.status, response.config.url);
+    return response;
+  },
+  (error) => {
+    console.error('API Response Error:', error.response?.status, error.config?.url, error.response?.data);
+    return Promise.reject(error);
   }
 );
 
