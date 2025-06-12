@@ -1,6 +1,3 @@
-// Performance Optimization Phase: Added React.memo, useMemo, useCallback for optimal rendering
-// This component showcases our evolution from basic React patterns to performance-optimized code
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { ViewColumnsIcon, ListBulletIcon, FunnelIcon, CalendarIcon } from '@heroicons/react/24/outline';
 import { 
@@ -15,8 +12,8 @@ import './BugList.css';
 const BugList = ({ bugs, loading, onStatusUpdate, onDelete }) => {
   const [selectedStatus, setSelectedStatus] = useState('All Status');
   const [selectedSeverity, setSelectedSeverity] = useState('All Severity');
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
-  const [sortBy, setSortBy] = useState('newest'); // 'newest', 'oldest', 'severity'
+  const [viewMode, setViewMode] = useState('grid'); 
+  const [sortBy, setSortBy] = useState('newest'); 
 
   const statusOptions = ['All Status', 'Open', 'Progress', 'Resolved'];
   const severityOptions = ['All Severity', 'Low', 'Medium', 'High', 'Critical'];
@@ -27,7 +24,7 @@ const BugList = ({ bugs, loading, onStatusUpdate, onDelete }) => {
     { value: 'title', label: 'By Title' }
   ];
 
-  // Memoize filter counts calculation to prevent recalculation on every render
+
   const counts = useMemo(() => {
     return {
       total: bugs.length,

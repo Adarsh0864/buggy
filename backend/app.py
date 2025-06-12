@@ -34,18 +34,16 @@ try:
 
     # Configure CORS for production
     frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
-    CORS(app, resources={
-        r"/*": {
-            "origins": [
-                frontend_url,
-                "http://localhost:*",
-                "http://127.0.0.1:*",
-                "https://*.netlify.app"
-            ],
-            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type"]
-        }
-    }, supports_credentials=True)
+    CORS(app, 
+         resources={
+             r"/*": {
+                 "origins": ["*"],
+                 "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+                 "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+                 "expose_headers": ["Content-Type", "Authorization"],
+                 "supports_credentials": True
+             }
+         })
 
     # Add request logging (only in development)
     @app.before_request
